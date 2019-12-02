@@ -1,0 +1,49 @@
+// Include standard font and media definitions
+#include <font.defs>
+
+
+// common for all thermal printers
+Version "1.2"
+DriverType custom
+ManualCopies Yes
+Throughput 1
+Attribute "PSVersion" "" "(3010.000) 550"
+Attribute "LanguageLevel" "" "3"
+Attribute "DefaultColorSpace" "" "Gray"
+Attribute "FileSystem" "" "False"
+Attribute "LandscapeOrientation" "" "Plus90"
+Attribute "TTRasterizer" "" "Type42"
+Attribute "VariablePaperSize" "" "True"
+Filter "application/vnd.cups-raster 100 rastertoadafruitmini"
+ColorDevice False
+VariablePaperSize Yes
+Font *
+
+
+// List the fonts that are supported, in this case all standard fonts...
+Font *
+
+// Manufacturer, model name, and version
+Manufacturer "Adafruit"
+ModelName "Mini"
+Version 1.0
+
+
+ModelNumber 384
+
+#media "58x50" 58mm 50mm
+#media "58x100" 58mm 100mm
+#media "58x200" 58mm 200mm
+HWMargins 5mm 0 5mm 0
+*MediaSize "58x50"
+MediaSize "58x100"
+MediaSize "58x200"
+
+MinSize 58mm 5mm
+MaxSize 58mm 1000mm
+
+// Supported resolutions
+*Resolution k 8 0 0 0 "208dpi/208 DPI"
+
+// Specify the name of the PPD file we want to generate...
+PCFileName "mini.ppd"
