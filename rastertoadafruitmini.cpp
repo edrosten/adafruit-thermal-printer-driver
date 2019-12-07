@@ -115,13 +115,11 @@ int main(){
 			}
 			if(bits)
 				cout << current;
-
 			
 			//Roll the buffer round.
 			std::rotate(errors.begin(), errors.begin()+1, errors.end());
 			for(auto& p:errors.back())
 				p=0;
-			
 	
 		}
 
