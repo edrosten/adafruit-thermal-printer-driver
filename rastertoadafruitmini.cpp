@@ -44,6 +44,12 @@ void rasterheader(uint16_t xsize, uint16_t ysize)
 }
 
 
+void set_heating_time(int time_factor){
+	// Page 47 of the manual
+	// Everything is default except the heat time
+	cout << ESC << 7 << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
+}
+
 constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
 		{{0, 0, 0, 7, 5}},
 		{{3, 5, 7, 5, 3}},
@@ -91,21 +97,17 @@ int main(){
 			//Estimate the lowest value pixel in the row
 			double low_val=1.0;
 			for(int i=0; i < (int)buffer.size(); i++)
-				 std::min(low_val, degamma(buffer[i]) + errors[0][i]);
-			//Add some headroom otherwise balck areas bleed because it can't go
+				 low_val = std::min(low_val, degamma(buffer[i]) + errors[0][i]);
+			//Add some headroom otherwise black areas bleed because it can't go
 			//dark enough
-			low_val*=0.99
+			low_val*=0.99;
 
-			//Set the darkness based on that
+			//Set the darkness based on the darkest pixel we want
 
-			//Emperical values for the effect of the timeing
+			//Emperical formula for the effect of the timing
 			double full_white=16;
-			double full_black = 16*7;
-			cout << ESC << 7 << (char)7 << (unsigned char)(pow(1-low_val,2)*(full_black-full_white)+full_white) << '\02';
-
-
-
-
+			double full_black=16*7;
+			set_heating_time(pow(1-low_val,2.0)*(full_black-full_white)+full_white);
 
 			//Print in MSB format, one line at a time
 			rasterheader(header.cupsWidth, 1);
