@@ -52,6 +52,10 @@ constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
 constexpr double diffusion_divisor=42;
 
 
+double degamma(int p){
+	return pow(p/255., 1/2.2);
+}
+
 int main(){
 
 	cups_raster_t *ras = cupsRasterOpen(0, CUPS_RASTER_READ);
@@ -83,6 +87,26 @@ int main(){
 			if (cupsRasterReadPixels(ras, buffer.data(), header.cupsBytesPerLine) == 0)
 				break;
 
+			
+			//Estimate the lowest value pixel in the row
+			double low_val=1.0;
+			for(int i=0; i < (int)buffer.size(); i++)
+				 std::min(low_val, degamma(buffer[i]) + errors[0][i]);
+			//Add some headroom otherwise balck areas bleed because it can't go
+			//dark enough
+			low_val*=0.99
+
+			//Set the darkness based on that
+
+			//Emperical values for the effect of the timeing
+			double full_white=16;
+			double full_black = 16*7;
+			cout << ESC << 7 << (char)7 << (unsigned char)(pow(1-low_val,2)*(full_black-full_white)+full_white) << '\02';
+
+
+
+
+
 			//Print in MSB format, one line at a time
 			rasterheader(header.cupsWidth, 1);
 			unsigned char current=0;
@@ -91,8 +115,8 @@ int main(){
 			for(int i=0; i < (int)buffer.size(); i++){
 				
 				//The actual pixel value with gamma correction
-				double pixel = pow(buffer[i]/255., 1./2.2) + errors[0][i];
-				double actual = pixel>.5?1:0;
+				double pixel = degamma(buffer[i]) + errors[0][i];
+				double actual = pixel>.5?1:low_val;
 				double error = pixel - actual; //This error is then distributed
 
 
@@ -125,6 +149,6 @@ int main(){
 
 		/* finish this page */
 	}
-	cout << "\n\n\n";
+	cout << "\n\n\n\n\n\n";
 	cupsRasterClose(ras);
 }
