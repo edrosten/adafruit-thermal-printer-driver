@@ -43,6 +43,14 @@ void rasterheader(uint16_t xsize, uint16_t ysize)
 }
 
 
+constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
+		{{0, 0, 0, 7, 5}},
+		{{3, 5, 7, 5, 3}},
+		{{1, 3, 5, 3, 1}}
+}};
+constexpr double diffusion_divisor=42;
+
+
 int main(){
 
 	cups_raster_t *ras = cupsRasterOpen(0, CUPS_RASTER_READ);
@@ -62,6 +70,9 @@ int main(){
 		// Input data buffer for one line
 		vector<unsigned char> buffer(header.cupsBytesPerLine);
 		
+		//Error diffusion data
+		vector<vector<double>> errors(diffusion_coefficients.size(), vector<double>(buffer.size(), 0.0));
+
 		clog << "Line bytes: " << buffer.size() << endl;
 		printerInitialise();
 
@@ -76,8 +87,23 @@ int main(){
 			unsigned char current=0;
 			int bits=0;
 
-			for(const auto& pixel: buffer){
-				current |= (pixel>128)<<(7-bits);
+			for(int i=0; i < (int)buffer.size(); i++){
+
+				double pixel = pow(buffer[i]/255., 1./2.2) + errors[0][i];
+				double actual = pixel>.5?1:0;
+				double error = pixel - actual; //This error is then distributed
+
+
+				//Diffuse forward the error	
+				for(int r=0; r < (int)diffusion_coefficients.size(); r++)
+					for(int cc=0; cc < (int)diffusion_coefficients[0].size(); cc++){
+						int c = cc - diffusion_coefficients[0].size()/2;
+						if(c+i >= 0 && c+i < (int)buffer.size() && diffusion_coefficients[r][cc]){
+							errors[r][i+c] += error * diffusion_coefficients[r][cc] / diffusion_divisor;
+						}
+					}
+
+				current |= (pixel<0.5)<<(7-bits);
 				bits++;
 				if(bits == 8){
 					cout << current;
@@ -87,6 +113,15 @@ int main(){
 			}
 			if(bits)
 				cout << current;
+
+			
+			errors.push_back({});
+			errors.back() = move(errors.front());
+			errors.erase(errors.begin());
+			for(auto& p:errors.back())
+				p=0;
+			
+	
 		}
 
 		/* finish this page */
