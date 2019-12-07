@@ -118,7 +118,7 @@ int main(){
 				
 				//The actual pixel value with gamma correction
 				double pixel = degamma(buffer[i]) + errors[0][i];
-				double actual = pixel>.5?1:low_val;
+				double actual = pixel>(1-low_val)/2 + low_val?1:low_val;
 				double error = pixel - actual; //This error is then distributed
 
 
@@ -131,7 +131,7 @@ int main(){
 						}
 					}
 
-				current |= (pixel<0.5)<<(7-bits);
+				current |= (actual!=1)<<(7-bits);
 				bits++;
 				if(bits == 8){
 					cout << current;
