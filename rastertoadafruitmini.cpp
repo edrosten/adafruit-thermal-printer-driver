@@ -5,6 +5,7 @@
 #include <array>
 #include <utility>
 #include <cmath>
+#include <algorithm>
 
 using std::clog;
 using std::cout;
@@ -88,7 +89,8 @@ int main(){
 			int bits=0;
 
 			for(int i=0; i < (int)buffer.size(); i++){
-
+				
+				//The actual pixel value with gamma correction
 				double pixel = pow(buffer[i]/255., 1./2.2) + errors[0][i];
 				double actual = pixel>.5?1:0;
 				double error = pixel - actual; //This error is then distributed
@@ -115,9 +117,8 @@ int main(){
 				cout << current;
 
 			
-			errors.push_back({});
-			errors.back() = move(errors.front());
-			errors.erase(errors.begin());
+			//Roll the buffer round.
+			std::rotate(errors.begin(), errors.begin()+1, errors.end());
 			for(auto& p:errors.back())
 				p=0;
 			
