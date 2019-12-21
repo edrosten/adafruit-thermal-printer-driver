@@ -48,20 +48,20 @@ MediaSize "58x200mm"
 //are executed (each one comes with a snippet of code to execute). In this
 //case, all snippets are empty.
 Option "PageFeed/Feed paper between pages" PickOne DocumentSetup 0
-  *Choice "0/None" "<</cupsInteger0  0>>setpagedevice"
-  Choice "1/1mm"   "<</cupsInteger0  1>>setpagedevice"
-  Choice "2/2mm"   "<</cupsInteger0  2>>setpagedevice"
-  Choice "5/5mm"   "<</cupsInteger0  5>>setpagedevice"
-  Choice "10/10mm" "<</cupsInteger0 10>>setpagedevice"
+  *Choice "None" "<</cupsInteger0  0>>setpagedevice"
+  Choice "1mm"   "<</cupsInteger0  1>>setpagedevice"
+  Choice "2mm"   "<</cupsInteger0  2>>setpagedevice"
+  Choice "5mm"   "<</cupsInteger0  5>>setpagedevice"
+  Choice "10mm" "<</cupsInteger0 10>>setpagedevice"
 
 Option "PageMark/Mark where to cut pages" Boolean DocumentSetup 1
   *Choice "No" "<</cupsInteger1 0>>setpagedevice"
   Choice "Yes" "<</cupsInteger1 0>>setpagedevice"
 
 Option "EjectFeed/Feed paper after printing" PickOne DocumentSetup 2
-  Choice "0/None"  "<</cupsInteger2  0>>setpagedevice"
-  *Choice "5/5mm"  "<</cupsInteger2  5>>setpagedevice"
-  Choice "10/10mm" "<</cupsInteger2 10>>setpagedevice"
+  Choice "None"  "<</cupsInteger2  0>>setpagedevice"
+  *Choice "5mm"  "<</cupsInteger2  5>>setpagedevice"
+  Choice "10mm" "<</cupsInteger2 10>>setpagedevice"
   
 Option "AutoCrop/Crop page to printed area" Boolean DocumentSetup 3
   *Choice "No" "<</cupsInteger3 0>>setpagedevice"
