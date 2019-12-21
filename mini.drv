@@ -66,6 +66,12 @@ Option "EjectFeed/Feed paper after printing" PickOne DocumentSetup 2
 Option "AutoCrop/Crop page to printed area" Boolean DocumentSetup 3
   *Choice "No" "<</cupsInteger3 0>>setpagedevice"
   Choice "Yes" "<</cupsInteger3 1>>setpagedevice"
+ 
+Option "Enhance/Enhance resolution" Boolean DocumentSetup 4
+  Choice "No" "<</cupsInteger4 0>>setpagedevice"
+  *Choice "Yes" "<</cupsInteger4 1>>setpagedevice"
+
+
 
 
 
