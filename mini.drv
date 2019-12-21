@@ -1,49 +1,48 @@
-// Include standard font and media definitions
 #include <font.defs>
 
 
-// common for all thermal printers
-Version "1.2"
-DriverType custom
-ManualCopies Yes
-Throughput 1
-Attribute "PSVersion" "" "(3010.000) 550"
-Attribute "LanguageLevel" "" "3"
-Attribute "DefaultColorSpace" "" "Gray"
-Attribute "FileSystem" "" "False"
-Attribute "LandscapeOrientation" "" "Plus90"
-Attribute "TTRasterizer" "" "Type42"
-Attribute "VariablePaperSize" "" "True"
-Filter "application/vnd.cups-raster 100 rastertoadafruitmini"
+DriverType custom  //Required I believe to set downstream filters 
+ManualCopies Yes //Set to yes if the driver doesn't know how to print multiples of pages
+Attribute "LanguageLevel" "" "3" //Default is 2 (from 1991), latest version is from 1997
+Attribute "DefaultColorSpace" "" "Gray" //Self explanatory except does this mean something else can change it?
+Attribute "TTRasterizer" "" "Type42" //Default is none, Type42 is the only extant useful one.
+Filter application/vnd.cups-raster 0 rastertoadafruitmini //Arguments are datatype to feed to the filter, the expected CPU load, and the name of the filter executable
 ColorDevice False
-VariablePaperSize Yes
-Font *
 
+Font * //Include all fonts
 
-// List the fonts that are supported, in this case all standard fonts...
-Font *
-
-// Manufacturer, model name, and version
+// Manufacturer, model name, and version of the driver
 Manufacturer "Adafruit"
 ModelName "Mini"
 Version 1.0
+ModelNumber 579 //That's the prduct number on the webeiste.
 
-
-ModelNumber 384
-
-#media "58x50" 58mm 50mm
-#media "58x100" 58mm 100mm
-#media "58x200" 58mm 200mm
-HWMargins 5mm 0 5mm 0
-*MediaSize "58x50"
-MediaSize "58x100"
-MediaSize "58x200"
-
+//I believe this allows users to specify custom sizes in the
+//print dialog, or on the command line.
+VariablePaperSize Yes
 MinSize 58mm 5mm
 MaxSize 58mm 1000mm
 
+//#media creates media definitions which may or may not be used
+//The paper is always 58mm wide, and have for now three different
+//lengths
+#media "58x50mm" 58mm 50mm
+#media "58x100mm" 58mm 100mm
+#media "58x200mm" 58mm 200mm
+
+//The print area is always 48mm wide, centred
+HWMargins 5mm 0 5mm 0
+
+//This actually uses the media definitions above
+*MediaSize "58x50mm"
+MediaSize "58x100mm"
+MediaSize "58x200mm"
+
 // Supported resolutions
+// Use as: Resolution colorspace bits-per-color row-count row-feed row-step name
+// Apparently mostly the row stuff is 0 in most drivers. The last field
+// (name) needs to be formatted correctly
 *Resolution k 8 0 0 0 "208dpi/208 DPI"
 
-// Specify the name of the PPD file we want to generate...
+// Name of the PPD file to be generated
 PCFileName "mini.ppd"
