@@ -1,6 +1,8 @@
 #include <cups/raster.h>
 
 #include <iostream>
+#include <streambuf>
+#include <ostream>
 #include <vector>
 #include <array>
 #include <utility>
@@ -20,7 +22,6 @@ using std::max;
 using std::vector;
 using std::array;
 using std::string;
-
 
 constexpr unsigned char ESC = 0x1b;
 constexpr unsigned char GS = 0x1d;
@@ -138,20 +139,22 @@ int main(int argc, char** argv){
 		auto_crop = header.cupsInteger[3];
 		enhance_resolution = header.cupsInteger[4];
 
-		if(page > 1)
+		if(page > 1){
+			clog << "DEBUG: page feeding " << eject_after_print_mm << "mm\n";
 			feed_mm(feed_between_pages_mm);
+		}
 
 		//Avoid double marking the boundary if there's no feed
-		if(mark_page_boundary && (feed_between_pages_mm > 0 || page == 1))
+		if(mark_page_boundary && (feed_between_pages_mm > 0 || page == 1)){
+			clog << "DEBUG: emitting page rule at page top\n";
 			horizontal_rule();
+		}
 
 		// Input data buffer for one line
 		vector<unsigned char> buffer(header.cupsBytesPerLine);
 		
 		//Error diffusion data
 		vector<vector<double>> errors(diffusion_coefficients.size(), vector<double>(buffer.size(), 0.0));
-
-		clog << "DEBUG: Line bytes " << buffer.size() << endl;
 
 		/* read raster data */
 		unsigned int n_blank=0;
@@ -170,8 +173,12 @@ int main(int argc, char** argv){
 			}
 			
 			//Auto crop means automatically remove white from the beginning and end of the page
-			if(!auto_crop || n_blank != y)
+			if(!auto_crop || n_blank != y){
+				clog << "DEBUG: Feeding " << n_blank << "lines\n";
 				feed_lines(n_blank);
+			}
+			else
+				clog << "DEBUG: AutoCrop skipping start " << n_blank << "lines\n";
 
 			n_blank = 0;
 
@@ -235,15 +242,22 @@ int main(int argc, char** argv){
 		}
 
 		//Finish page
-		if(!auto_crop)
+		if(!auto_crop){
+			clog << "DEBUG: Feeding " << n_blank << "lines at end\n";
 			feed_lines(n_blank);
+		}
+		else
+			clog << "DEBUG: AutoCrop skipping end " << n_blank << "lines\n";
 
-		if(mark_page_boundary)
+		if(mark_page_boundary){
+			clog << "DEBUG: emitting page rule at page end\n";
 			horizontal_rule();
+		}
 	}
 
 	finish:
 
+	clog << "DEBUG: end of print feeding " << eject_after_print_mm << "mm\n";
 	feed_mm(eject_after_print_mm);
 	printerInitialise();
 	cupsRasterClose(ras);
