@@ -77,7 +77,7 @@ constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
 		{{3, 5, 7, 5, 3}},
 		{{1, 3, 5, 3, 1}}
 }};
-constexpr double diffusion_divisor=42;
+constexpr double diffusion_divisor=48;
 
 
 double degamma(int p){
@@ -123,6 +123,13 @@ int main(int argc, char** argv){
 
 	while (cupsRasterReadHeader2(ras, &header))
 	{
+		//Read the configuration parameters
+		feed_between_pages_mm = header.cupsInteger[0];
+		mark_page_boundary = header.cupsInteger[1];
+		eject_after_print_mm = header.cupsInteger[2];
+		auto_crop = header.cupsInteger[3];
+		enhance_resolution = header.cupsInteger[4];
+
 		page++;
 		//Write out information to CUPS 
 		clog << "PAGE: " << page << " " << header.NumCopies << "\n";
@@ -132,25 +139,12 @@ int main(int argc, char** argv){
 		clog << "DEBUG: Height" << header.cupsHeight << endl;
 
 
-		//Read the configuration parameters
-		feed_between_pages_mm = header.cupsInteger[0];
-		mark_page_boundary = header.cupsInteger[1];
-		eject_after_print_mm = header.cupsInteger[2];
-		auto_crop = header.cupsInteger[3];
-		enhance_resolution = header.cupsInteger[4];
 
 		clog << "DEBUG: feed_between_pages_mm " << feed_between_pages_mm << endl;
 		clog << "DEBUG: mark_page_boundary " << mark_page_boundary << endl;
 		clog << "DEBUG: eject_after_print_mm " << eject_after_print_mm << endl;
 		clog << "DEBUG: auto_crop " << auto_crop << endl;
 		clog << "DEBUG: enhance_resolution " << enhance_resolution << endl;
-
-		for(int i=0; i < 16; i++)
-			clog << "DEBUG: cupsInteger[" << i << "] = " << header.cupsInteger[i] << endl;
-		for(int i=0; i < 16; i++)
-			clog << "DEBUG: cupsReal[" << i << "] = " << header.cupsReal[i] << endl;
-		for(int i=0; i < 16; i++)
-			clog << "DEBUG: cupsString[" << i << "] = " << header.cupsString[i] << endl;
 
 		if(page > 1){
 			clog << "DEBUG: page feeding " << eject_after_print_mm << "mm\n";
@@ -174,6 +168,12 @@ int main(int argc, char** argv){
 		for (unsigned int y = 0; y < header.cupsHeight; y ++)
 		{
 			if(cancel_job){
+				//We have ensured by this point that the output is never a half
+				//written raster line, so anything sent here will be interpreted as 
+				//a command not simply more data.
+				clog << "DEBUG: job cancelled\n";
+				printerInitialise();
+				cout << "*** cancelled ***\n";
 				goto finish;
 			}
 
@@ -213,7 +213,11 @@ int main(int argc, char** argv){
 			//Emperical formula for the effect of the timing
 			double full_white=16;
 			double full_black=16*7;
-			set_heating_time(pow(1-low_val,2.0)*(full_black-full_white)+full_white);
+
+			if(enhance_resolution){
+				cerr << low_val << endl;
+				set_heating_time(pow(1-low_val,2.0)*(full_black-full_white)+full_white);
+			}
 
 			//Print in MSB format, one line at a time
 			rasterheader(header.cupsWidth, 1);
@@ -226,8 +230,7 @@ int main(int argc, char** argv){
 				double pixel = degamma(buffer[i]) + errors[0][i];
 				double actual = pixel>(1-low_val)/2 + low_val?1:low_val;
 				double error = pixel - actual; //This error is then distributed
-
-
+				
 				//Diffuse forward the error	
 				for(int r=0; r < (int)diffusion_coefficients.size(); r++)
 					for(int cc=0; cc < (int)diffusion_coefficients[0].size(); cc++){
