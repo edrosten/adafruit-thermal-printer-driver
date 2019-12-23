@@ -42,7 +42,7 @@ MediaSize "58x200mm"
 // Use as: Resolution colorspace bits-per-color row-count row-feed row-step name
 // Apparently mostly the row stuff is 0 in most drivers. The last field
 // (name) needs to be formatted correctly
-*Resolution k 8 0 0 0 "208dpi/208 DPI"
+*Resolution k 8 0 0 0 "203dpi/203 DPI"
 
 //The last argument is the order in which the order in which the options 
 //are executed (each one comes with a snippet of code to execute). In this

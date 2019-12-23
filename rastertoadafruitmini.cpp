@@ -1,6 +1,7 @@
 #include <cups/raster.h>
 
 #include <iostream>
+#include <fstream>
 #include <streambuf>
 #include <ostream>
 #include <vector>
@@ -90,7 +91,7 @@ volatile sig_atomic_t cancel_job = 0;
 
 
 int main(int argc, char** argv){
-
+	
 	if(argc !=6 && argc != 7){
 		cerr << "ERROR: " << argv[0] << " job-id user title copies options [file]\n";
 		exit(1);

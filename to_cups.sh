@@ -8,6 +8,6 @@ gs -dPARANOIDSAFER -dNOPAUSE -dBATCH -sstdout=%stderr -sOutputFile=%stdout \
 	-dcupsInteger0=0 \
 	-dcupsInteger1=1 \
 	-dcupsInteger2=10 \
-	-dcupsInteger3=0 \
+	-dcupsInteger3=1 \
 	-dcupsInteger4=1 \
 	-I/usr/share/cups/fonts \ "$@"
