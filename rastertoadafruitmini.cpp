@@ -39,6 +39,9 @@ array<unsigned char, 2> binary(uint16_t n){
 	return {{static_cast<unsigned char>(n&0xff), static_cast<unsigned char>(n >> 8)}};
 }
 
+void printerInitialise(){
+	cout << ESC << '\x40';
+}
 
 // enter raster mode and set up x and y dimensions
 void rasterheader(uint16_t xsize, uint16_t ysize)
@@ -116,6 +119,9 @@ int main(int argc, char** argv){
 	int eject_after_print_mm = 0;
 	int auto_crop = 0;
 	int enhance_resolution = 0;
+
+	printerInitialise();
+	cout << std::flush;
 
 	while (cupsRasterReadHeader2(ras, &header))
 	{
