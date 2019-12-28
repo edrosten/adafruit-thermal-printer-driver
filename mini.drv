@@ -8,6 +8,7 @@ Attribute "DefaultColorSpace" "" "Gray" //Self explanatory except does this mean
 Attribute "TTRasterizer" "" "Type42" //Default is none, Type42 is the only extant useful one.
 Filter application/vnd.cups-raster 0 rastertoadafruitmini //Arguments are datatype to feed to the filter, the expected CPU load, and the name of the filter executable
 ColorDevice False
+*ColorModel Gray/Grayscale w chunky 0
 
 Font * //Include all fonts
 
@@ -42,7 +43,7 @@ MediaSize "58x200mm"
 // Use as: Resolution colorspace bits-per-color row-count row-feed row-step name
 // Apparently mostly the row stuff is 0 in most drivers. The last field
 // (name) needs to be formatted correctly
-*Resolution k 8 0 0 0 "203dpi/203 DPI"
+*Resolution - 8 0 0 0 "203dpi/203 DPI"
 
 //The last argument is the order in which the order in which the options 
 //are executed (each one comes with a snippet of code to execute). In this
@@ -56,12 +57,13 @@ Option "PageFeed/Feed paper between pages" PickOne DocumentSetup 0
 
 Option "PageMark/Mark where to cut pages" Boolean DocumentSetup 1
   *Choice "No" "<</cupsInteger1 0>>setpagedevice"
-  Choice "Yes" "<</cupsInteger1 0>>setpagedevice"
+  Choice "Yes" "<</cupsInteger1 1>>setpagedevice"
 
 Option "EjectFeed/Feed paper after printing" PickOne DocumentSetup 2
   Choice "None"  "<</cupsInteger2  0>>setpagedevice"
-  *Choice "5mm"  "<</cupsInteger2  5>>setpagedevice"
-  Choice "10mm" "<</cupsInteger2 10>>setpagedevice"
+  Choice "5mm"  "<</cupsInteger2  5>>setpagedevice"
+  *Choice "10mm" "<</cupsInteger2 10>>setpagedevice"
+  Choice "15mm" "<</cupsInteger2 15>>setpagedevice"
   
 Option "AutoCrop/Crop page to printed area" Boolean DocumentSetup 3
   *Choice "No" "<</cupsInteger3 0>>setpagedevice"
