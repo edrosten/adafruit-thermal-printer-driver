@@ -40,10 +40,6 @@ array<unsigned char, 2> binary(uint16_t n){
 }
 
 
-void printerInitialise(){
-	cout << ESC << '\x40';
-}
-
 // enter raster mode and set up x and y dimensions
 void rasterheader(uint16_t xsize, uint16_t ysize)
 {
@@ -114,7 +110,6 @@ int main(int argc, char** argv){
 	cups_page_header2_t header;
 	int page = 0;
 
-	printerInitialise();
 
 	int feed_between_pages_mm = 0;
 	int mark_page_boundary = 0;
@@ -173,7 +168,6 @@ int main(int argc, char** argv){
 				//written raster line, so anything sent here will be interpreted as 
 				//a command not simply more data.
 				clog << "DEBUG: job cancelled\n";
-				printerInitialise();
 				cout << "*** cancelled ***\n";
 				goto finish;
 			}
@@ -181,6 +175,7 @@ int main(int argc, char** argv){
 			if(cupsRasterReadPixels(ras, buffer.data(), header.cupsBytesPerLine) == 0)
 				break;
 			
+			//Count blank lines rather than printing. Required for auto-cropping
 			if(find_if(buffer.begin(), buffer.end(), [](auto c){return c!=255;}) == buffer.end()){
 				n_blank++;
 				continue;
@@ -190,7 +185,18 @@ int main(int argc, char** argv){
 			if(!auto_crop || n_blank != y){
 				if(n_blank){
 					clog << "DEBUG: Feeding " << n_blank << " lines\n";
-					feed_lines(n_blank);
+
+					//Emit blank lines as feed commands, for faster printing. However this messes
+					//up the temperature calibration, so don't do it in resolution enhanced mode.
+					if(!enhance_resolution)
+						feed_lines(n_blank);
+					else{
+						for(unsigned int i=0; i < n_blank; i++){
+							rasterheader(header.cupsWidth, 1);
+							for(unsigned int j=0; j < header.cupsBytesPerLine; j++)
+								cout << '\x00';
+						}
+					}
 				}
 			}
 			else
@@ -216,7 +222,6 @@ int main(int argc, char** argv){
 			double full_black=16*7;
 
 			if(enhance_resolution){
-				cerr << low_val << endl;
 				set_heating_time(pow(1-low_val,2.0)*(full_black-full_white)+full_white);
 			}
 
@@ -278,6 +283,6 @@ int main(int argc, char** argv){
 
 	clog << "DEBUG: end of print feeding " << eject_after_print_mm << "mm\n";
 	feed_mm(eject_after_print_mm);
-	printerInitialise();
+	cout.flush();
 	cupsRasterClose(ras);
 }
