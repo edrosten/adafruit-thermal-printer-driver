@@ -7,6 +7,7 @@ Attribute "LanguageLevel" "" "3" //Default is 2 (from 1991), latest version is f
 Attribute "DefaultColorSpace" "" "Gray" //Self explanatory except does this mean something else can change it?
 Attribute "TTRasterizer" "" "Type42" //Default is none, Type42 is the only extant useful one.
 Filter application/vnd.cups-raster 0 rastertoadafruitmini //Arguments are datatype to feed to the filter, the expected CPU load, and the name of the filter executable
+Filter text/plain 0 -
 ColorDevice False
 *ColorModel Gray/Grayscale w chunky 0
 
