@@ -53,11 +53,6 @@ void transmit_status(){
 }
 
 
-void status_command(){
-	cout << ESC << "v0" << flush;
-}
-
-
 // enter raster mode and set up x and y dimensions
 void rasterheader(uint16_t xsize, uint16_t ysize)
 {
@@ -100,49 +95,56 @@ double degamma(int p){
 }
 
 
-void wait_for_lines(int lines_sent, int& read_back, int & paper_out, int max_diff){
-	
+void wait_for_lines(const int lines_sent, int& read_back, int max_diff){
 	//We've stuffed requests into the command stream which reply with bytes
 	//for each line printed. This waits for replies until the number of 
 	//relplies is within some threshold of the number of requests sent.
 	//
 	//This is for buffer management.
-	status_command();
+	//
+	//Also, if there's no change in the number of lines read for over some
+	//time threshold then the printer has stopped which means out of paper
+	//since it has only one sensor.
+	using namespace std::literals;
+	using namespace std::chrono;
+
+	auto time_of_last_change = steady_clock::now();
+	bool has_paper=true;
+
 	for(;;){
 		char buf;
 		ssize_t bytes_read = cupsBackChannelRead(&buf, 1, 0.0);
 
-		cerr << "DEBUG: i/o " << lines_sent << " " << read_back << "\n";
-
 		if(bytes_read > 0){
+			read_back++;
 			
-			cerr << "DEBUG: return byte is " << int(buf) << endl;
-
-			if(buf & 32){
-				if(buf & 4) {
-					if(!paper_out){
-						paper_out = true;
-						cerr << "STATE: +media-needed +media-empty";
-					}
-				}
-				else{
-					if(paper_out){
-						paper_out = false;
-						cerr << "STATE: -media-needed -media-empty";
-					}
-				}
-
+			if(!has_paper){
+				cerr << "STATE: -media-empty\n";
+				cerr << "STATE: -media-needed\n";
+				cerr << "STATE: -cover-open\n";
+				cerr << "INFO: Printing\n";
 			}
-			else{
-				read_back++;
-			}
-
+				
+			has_paper = true;
+			time_of_last_change = steady_clock::now();
 		}
+		else if(auto interval = steady_clock::now() - time_of_last_change; interval > 2500ms){
+			cerr << "DEBUG: no change for " << duration_cast<seconds>(interval).count() << " seconds, assuming no paper\n";
+			if(has_paper){
+				cerr << "STATE: +media-empty\n";
+				cerr << "STATE: +media-needed\n";
+				cerr << "STATE: +cover-open\n";
+				cerr << "INFO: Printer door open or no paper left\n";
+			}
+			has_paper = false;
+		}
+
+		cerr << "DEBUG: Lines sent=" << lines_sent << " lines printed=" << read_back << "\n";
+
 		if(lines_sent - read_back <= max_diff)
 			break;
 
 		cerr << "DEBUG: buffer too full (" << lines_sent - read_back << "), pausing...\n";
-		using namespace std::literals;
 		std::this_thread::sleep_for(100ms);
 	}
 }
@@ -198,7 +200,6 @@ int main(int argc, char** argv){
 
 	int lines_sent = 0;
 	int read_back= 0;
-	int paper_out = 0;
 
 	while (cupsRasterReadHeader2(ras, &header))
 	{
@@ -371,10 +372,9 @@ int main(int argc, char** argv){
 
 			//Stuff requests for paper status into the command stream
 			//and count the returns. We allow a gap of 80 lines (1cm of printing)
-			//Buffer management is tied in with paper sensing
 			transmit_status();
 			lines_sent++;
-			wait_for_lines(lines_sent, read_back, paper_out, 80);
+			wait_for_lines(lines_sent, read_back, 80);
 		}
 
 		//Finish page
