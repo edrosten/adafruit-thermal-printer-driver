@@ -9,14 +9,16 @@
 #include <utility>
 #include <cmath>
 #include <algorithm>
+#include <thread>
 
 #include <signal.h>
 #include <unistd.h>
 #include <sys/fcntl.h>
 
-using std::clog;
+using std::cerr;
 using std::cerr;
 using std::cout;
+using std::flush;
 using std::endl;
 using std::min;
 using std::max;
@@ -27,8 +29,7 @@ using std::string;
 constexpr unsigned char ESC = 0x1b;
 constexpr unsigned char GS = 0x1d;
 
-// Write out a std::array of bytes as bytes.  This will form the basis
-// of sending data to the printer.
+// Write out a std::array of bytes as bytes. 
 template<size_t N>
 std::ostream& operator<<(std::ostream& out, const array<unsigned char, N>& a){
 	out.write(reinterpret_cast<const char*>(a.data()), a.size());
@@ -41,8 +42,16 @@ array<unsigned char, 2> binary(uint16_t n){
 
 void printerInitialise(){
 	cout << ESC << '\x40';
-	cout << std::flush;
+	//If you dont flush here, then the initialise command can kill some of the
+	//data in the buffer, leading to the printer to eat some control codes and
+	//print out junk.
+	cout << flush;
 }
+
+void transmit_status(){
+	cout << GS << "r1" << flush;
+}
+
 
 // enter raster mode and set up x and y dimensions
 void rasterheader(uint16_t xsize, uint16_t ysize)
@@ -67,9 +76,9 @@ void horizontal_rule(int w=384){
 	cout << string((w+7)/8, '\xff');
 }
 
-void set_heating_time(int time_factor){
+void set_heating_time(int time_factor=80){
 	// Page 47 of the manual
-	// Everything is default except the heat time
+	// All the defaults are used if not overridden
 	cout << ESC << 7 << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
 }
 
@@ -86,12 +95,36 @@ double degamma(int p){
 }
 
 
+void wait_for_lines(const int lines_sent, int& read_back, int max_diff){
+	//We've stuffed requests into the command stream which reply with bytes
+	//for each line printed. This waits for replies until the number of 
+	//relplies is within some threshold of the number of requests sent.
+	//
+	//This is for buffer management.
+	for(;;){
+		char buf;
+		ssize_t bytes_read = cupsBackChannelRead(&buf, 1, 0.0);
+
+		if(bytes_read > 0)
+			read_back++;
+
+		cerr << "DEBUG: i/o " << lines_sent << " " << read_back << "\n";
+
+		if(lines_sent - read_back <= max_diff)
+			break;
+
+		cerr << "DEBUG: buffer too full (" << lines_sent - read_back << "), pausing...\n";
+		using namespace std::literals;
+		std::this_thread::sleep_for(100ms);
+	}
+}
 volatile sig_atomic_t cancel_job = 0;
 
 
 
 int main(int argc, char** argv){
 	
+	cerr << "DEBUG: Starting the AdaFruit Mini Driver, by E. Rosten\n";
 	if(argc !=6 && argc != 7){
 		cerr << "ERROR: " << argv[0] << " job-id user title copies options [file]\n";
 		exit(1);
@@ -108,7 +141,16 @@ int main(int argc, char** argv){
 	
 	//As recommended by the CUPS documentation https://www.cups.org/doc/api-filter.html#SIGNALS
 	signal(SIGPIPE, SIG_IGN);
-	signal(SIGTERM, [](int){ cancel_job = 1;});
+
+	{
+		struct sigaction int_action;
+		memset(&int_action, 0, sizeof(int_action));
+		sigemptyset(&int_action.sa_mask);
+		int_action.sa_handler = [](int){
+			cancel_job=1;
+		};
+		sigaction(SIGTERM, &int_action, nullptr);
+	}
 
 	cups_raster_t *ras = cupsRasterOpen(input_fd, CUPS_RASTER_READ);
 	cups_page_header2_t header;
@@ -122,6 +164,12 @@ int main(int argc, char** argv){
 	int enhance_resolution = 0;
 
 	printerInitialise();
+	//This isn't cleared by initialize, so reset it to the 
+	//default just in case.
+	set_heating_time();
+
+	int lines_sent = 0;
+	int read_back= 0;
 
 	while (cupsRasterReadHeader2(ras, &header))
 	{
@@ -134,28 +182,32 @@ int main(int argc, char** argv){
 
 		page++;
 		//Write out information to CUPS 
-		clog << "PAGE: " << page << " " << header.NumCopies << "\n";
-		clog << "DEBUG: bitsperpixel " << header.cupsBitsPerPixel << endl;
-		clog << "DEBUG: BitsPerColor " << header.cupsBitsPerColor << endl;
-		clog << "DEBUG: Width " << header.cupsWidth << endl;
-		clog << "DEBUG: Height" << header.cupsHeight << endl;
+		cerr << "PAGE: " << page << " " << header.NumCopies << "\n";
+		cerr << "DEBUG: bitsperpixel " << header.cupsBitsPerPixel << endl;
+		cerr << "DEBUG: BitsPerColor " << header.cupsBitsPerColor << endl;
+		cerr << "DEBUG: Width " << header.cupsWidth << endl;
+		cerr << "DEBUG: Height" << header.cupsHeight << endl;
 
 
 
-		clog << "DEBUG: feed_between_pages_mm " << feed_between_pages_mm << endl;
-		clog << "DEBUG: mark_page_boundary " << mark_page_boundary << endl;
-		clog << "DEBUG: eject_after_print_mm " << eject_after_print_mm << endl;
-		clog << "DEBUG: auto_crop " << auto_crop << endl;
-		clog << "DEBUG: enhance_resolution " << enhance_resolution << endl;
+		cerr << "DEBUG: feed_between_pages_mm " << feed_between_pages_mm << endl;
+		cerr << "DEBUG: mark_page_boundary " << mark_page_boundary << endl;
+		cerr << "DEBUG: eject_after_print_mm " << eject_after_print_mm << endl;
+		cerr << "DEBUG: auto_crop " << auto_crop << endl;
+		cerr << "DEBUG: enhance_resolution " << enhance_resolution << endl;
 
 		if(page > 1){
-			clog << "DEBUG: page feeding " << eject_after_print_mm << "mm\n";
+			cerr << "DEBUG: page feeding " << eject_after_print_mm << "mm\n";
 			feed_mm(feed_between_pages_mm);
 		}
 
 		//Avoid double marking the boundary if there's no feed
 		if(mark_page_boundary && (feed_between_pages_mm > 0 || page == 1)){
-			clog << "DEBUG: emitting page rule at page top\n";
+			cerr << "DEBUG: emitting page rule at page top\n";
+
+			//Reset the line to all dark for the rule
+			if(enhance_resolution)
+				set_heating_time();
 			horizontal_rule();
 		}
 
@@ -173,8 +225,24 @@ int main(int argc, char** argv){
 				//We have ensured by this point that the output is never a half
 				//written raster line, so anything sent here will be interpreted as 
 				//a command not simply more data.
-				clog << "DEBUG: job cancelled\n";
-				cout << "*** cancelled ***\n";
+				cerr << "DEBUG: job cancelled\n";
+				
+				//This causes anything in the buffer to actually be printed
+				//The printer stores segeral lines of bitmap worth and then
+				//prints them. If that buffer is partially full right at the end then
+				//things can go missing print wise.
+				feed_lines(1);
+				cout << flush;
+				
+				//Reset the heater to the default so that the cancelled message appears
+				set_heating_time();
+				cout << flush<<endl;
+				cout << "*** Cancelled ***\n";
+				
+				//Unconditionally eject the cancelled job for tearoff
+				//10mm is sufficient to clear the case
+				feed_mm(10);
+				cout << flush;
 				goto finish;
 			}
 
@@ -190,7 +258,7 @@ int main(int argc, char** argv){
 			//Auto crop means automatically remove white from the beginning and end of the page
 			if(!auto_crop || n_blank != y){
 				if(n_blank){
-					clog << "DEBUG: Feeding " << n_blank << " lines\n";
+					cerr << "DEBUG: Feeding " << n_blank << " lines\n";
 
 					//Emit blank lines as feed commands, for faster printing. However this messes
 					//up the temperature calibration, so don't do it in resolution enhanced mode.
@@ -206,7 +274,7 @@ int main(int argc, char** argv){
 				}
 			}
 			else
-				clog << "DEBUG: AutoCrop skipping start " << n_blank << " lines\n";
+				cerr << "DEBUG: AutoCrop skipping start " << n_blank << " lines\n";
 
 			n_blank = 0;
 
@@ -233,6 +301,7 @@ int main(int argc, char** argv){
 
 			//Print in MSB format, one line at a time
 			rasterheader(header.cupsWidth, 1);
+
 			unsigned char current=0;
 			int bits=0;
 
@@ -269,26 +338,46 @@ int main(int argc, char** argv){
 			std::rotate(errors.begin(), errors.begin()+1, errors.end());
 			for(auto& p:errors.back())
 				p=0;
+		
+
+			//Stuff requests for paper status into the command stream
+			//and count the returns. We allow a gap of 80 lines (about 1cm of printing)
+			transmit_status();
+			lines_sent++;
+			wait_for_lines(lines_sent, read_back, 80);
 		}
 
 		//Finish page
 		if(!auto_crop){
-			clog << "DEBUG: Feeding " << n_blank << " lines at end\n";
+			cerr << "DEBUG: Feeding " << n_blank << " lines at end\n";
 			feed_lines(n_blank);
 		}
 		else
-			clog << "DEBUG: AutoCrop skipping end " << n_blank << " lines\n";
+			cerr << "DEBUG: AutoCrop skipping end " << n_blank << " lines\n";
 
 		if(mark_page_boundary){
-			clog << "DEBUG: emitting page rule at page end\n";
+			cerr << "DEBUG: emitting page rule at page end\n";
+
+			//Reset the line to all dark for the rule
+			if(enhance_resolution)
+				set_heating_time();
 			horizontal_rule();
 		}
+
+	
 	}
 
-	finish:
-
-	clog << "DEBUG: end of print feeding " << eject_after_print_mm << "mm\n";
 	feed_mm(eject_after_print_mm);
-	cout.flush();
+
+
+	finish:
+	cerr << "DEBUG: end of print feeding " << eject_after_print_mm << "mm\n";
+	cerr << "DEBUG: end status " << cancel_job << "\n";
+
+	//Reset the printer to the default state. 
+	set_heating_time();
+	cout << flush;
+	//using namespace std::literals;
+	//std::this_thread::sleep_for(10s);
 	cupsRasterClose(ras);
 }

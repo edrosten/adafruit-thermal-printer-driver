@@ -28,7 +28,7 @@ MaxSize 58mm 1000mm
 //#media creates media definitions which may or may not be used
 //The paper is always 58mm wide, and have for now three different
 //lengths
-#media "58x50mm" 58mm 50mm
+#media "50x58mmRotated" 58mm 50mm
 #media "58x100mm" 58mm 100mm
 #media "58x200mm" 58mm 200mm
 
@@ -36,7 +36,7 @@ MaxSize 58mm 1000mm
 HWMargins 5mm 0 5mm 0
 
 //This actually uses the media definitions above
-*MediaSize "58x50mm"
+*MediaSize "50x58mmRotated"
 MediaSize "58x100mm"
 MediaSize "58x200mm"
 
@@ -57,8 +57,8 @@ Option "PageFeed/Feed paper between pages" PickOne DocumentSetup 0
   Choice "10mm" "<</cupsInteger0 10>>setpagedevice"
 
 Option "PageMark/Mark where to cut pages" Boolean DocumentSetup 1
-  *Choice "No" "<</cupsInteger1 0>>setpagedevice"
-  Choice "Yes" "<</cupsInteger1 1>>setpagedevice"
+  Choice "True/Yes" "<</cupsInteger1 1>>setpagedevice"
+  *Choice "False/No" "<</cupsInteger1 0>>setpagedevice"
 
 Option "EjectFeed/Feed paper after printing" PickOne DocumentSetup 2
   Choice "None"  "<</cupsInteger2  0>>setpagedevice"
@@ -67,12 +67,12 @@ Option "EjectFeed/Feed paper after printing" PickOne DocumentSetup 2
   Choice "15mm" "<</cupsInteger2 15>>setpagedevice"
   
 Option "AutoCrop/Crop page to printed area" Boolean DocumentSetup 3
-  *Choice "No" "<</cupsInteger3 0>>setpagedevice"
-  Choice "Yes" "<</cupsInteger3 1>>setpagedevice"
+  Choice "True/Yes" "<</cupsInteger3 1>>setpagedevice"
+  *Choice "False/No" "<</cupsInteger3 0>>setpagedevice"
  
 Option "Enhance/Enhance resolution" Boolean DocumentSetup 4
-  Choice "No" "<</cupsInteger4 0>>setpagedevice"
-  *Choice "Yes" "<</cupsInteger4 1>>setpagedevice"
+  Choice "True/Yes" "<</cupsInteger4 1>>setpagedevice"
+  *Choice "False/No" "<</cupsInteger4 0>>setpagedevice"
 
 
 
