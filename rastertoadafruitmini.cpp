@@ -53,6 +53,11 @@ void transmit_status(){
 }
 
 
+void status_command(){
+	cout << ESC << "v0" << flush;
+}
+
+
 // enter raster mode and set up x and y dimensions
 void rasterheader(uint16_t xsize, uint16_t ysize)
 {
@@ -95,21 +100,44 @@ double degamma(int p){
 }
 
 
-void wait_for_lines(const int lines_sent, int& read_back, int max_diff){
+void wait_for_lines(int lines_sent, int& read_back, int & paper_out, int max_diff){
+	
 	//We've stuffed requests into the command stream which reply with bytes
 	//for each line printed. This waits for replies until the number of 
 	//relplies is within some threshold of the number of requests sent.
 	//
 	//This is for buffer management.
+	status_command();
 	for(;;){
 		char buf;
 		ssize_t bytes_read = cupsBackChannelRead(&buf, 1, 0.0);
 
-		if(bytes_read > 0)
-			read_back++;
-
 		cerr << "DEBUG: i/o " << lines_sent << " " << read_back << "\n";
 
+		if(bytes_read > 0){
+			
+			cerr << "DEBUG: return byte is " << int(buf) << endl;
+
+			if(buf & 32){
+				if(buf & 4) {
+					if(!paper_out){
+						paper_out = true;
+						cerr << "STATE: +media-needed +media-empty";
+					}
+				}
+				else{
+					if(paper_out){
+						paper_out = false;
+						cerr << "STATE: -media-needed -media-empty";
+					}
+				}
+
+			}
+			else{
+				read_back++;
+			}
+
+		}
 		if(lines_sent - read_back <= max_diff)
 			break;
 
@@ -170,6 +198,7 @@ int main(int argc, char** argv){
 
 	int lines_sent = 0;
 	int read_back= 0;
+	int paper_out = 0;
 
 	while (cupsRasterReadHeader2(ras, &header))
 	{
@@ -341,10 +370,11 @@ int main(int argc, char** argv){
 		
 
 			//Stuff requests for paper status into the command stream
-			//and count the returns. We allow a gap of 80 lines (about 1cm of printing)
+			//and count the returns. We allow a gap of 80 lines (1cm of printing)
+			//Buffer management is tied in with paper sensing
 			transmit_status();
 			lines_sent++;
-			wait_for_lines(lines_sent, read_back, 80);
+			wait_for_lines(lines_sent, read_back, paper_out, 80);
 		}
 
 		//Finish page
