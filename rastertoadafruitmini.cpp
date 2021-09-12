@@ -153,6 +153,10 @@ volatile sig_atomic_t cancel_job = 0;
 
 
 int main(int argc, char** argv){
+	cerr << "STATE: -media-empty\n";
+	cerr << "STATE: -media-needed\n";
+	cerr << "STATE: -cover-open\n";
+	cerr << "INFO: Printing\n";
 	
 	cerr << "DEBUG: Starting the AdaFruit Mini Driver, by E. Rosten\n";
 	if(argc !=6 && argc != 7){
