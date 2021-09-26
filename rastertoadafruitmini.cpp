@@ -150,9 +150,27 @@ void wait_for_lines(const int lines_sent, int& read_back, int max_diff){
 }
 volatile sig_atomic_t cancel_job = 0;
 
+std::ofstream *wtf;
 
+void set_heating_time_basic(int heating_dots, int heating_time_us, int heating_interval_us)
+{
+	//Reject illegal values
+	if(heating_dots < 8)
+		return;
+	if(heating_time_us < 30)
+		return;
+	
+	int dots = min(255,max(0,heating_dots/8 - 1));
+	int time = min(255, max(0,heating_time_us / 10));
+	int interval = min(255,max(0,heating_interval_us / 10));
+
+	// Page 47 of the manual
+	// All the defaults are used if not overridden
+	cout << ESC << 7 << (unsigned char)dots << (unsigned char)time << (unsigned char)interval;
+}
 
 int main(int argc, char** argv){
+	
 	cerr << "STATE: -media-empty\n";
 	cerr << "STATE: -media-needed\n";
 	cerr << "STATE: -cover-open\n";
@@ -197,6 +215,10 @@ int main(int argc, char** argv){
 	int auto_crop = 0;
 	int enhance_resolution = 0;
 
+	int heating_dots = 64;
+	int heating_time_us = 800;
+	int heating_interval_us = 20;
+
 	printerInitialise();
 	//This isn't cleared by initialize, so reset it to the 
 	//default just in case.
@@ -213,6 +235,10 @@ int main(int argc, char** argv){
 		eject_after_print_mm = header.cupsInteger[2];
 		auto_crop = header.cupsInteger[3];
 		enhance_resolution = header.cupsInteger[4];
+		heating_dots = header.cupsInteger[5];
+		heating_time_us = header.cupsInteger[6];
+		heating_interval_us = header.cupsInteger[7];
+
 
 		page++;
 		//Write out information to CUPS 
@@ -221,14 +247,17 @@ int main(int argc, char** argv){
 		cerr << "DEBUG: BitsPerColor " << header.cupsBitsPerColor << endl;
 		cerr << "DEBUG: Width " << header.cupsWidth << endl;
 		cerr << "DEBUG: Height" << header.cupsHeight << endl;
-
-
-
 		cerr << "DEBUG: feed_between_pages_mm " << feed_between_pages_mm << endl;
 		cerr << "DEBUG: mark_page_boundary " << mark_page_boundary << endl;
 		cerr << "DEBUG: eject_after_print_mm " << eject_after_print_mm << endl;
 		cerr << "DEBUG: auto_crop " << auto_crop << endl;
 		cerr << "DEBUG: enhance_resolution " << enhance_resolution << endl;
+		cerr << "DEBUG: heating_dots " << heating_dots << endl;
+		cerr << "DEBUG: heating_time_us " << heating_time_us << endl;
+		cerr << "DEBUG: heating_interval_us " << heating_interval_us << endl;
+
+		if(!enhance_resolution)
+			set_heating_time_basic(heating_dots,heating_time_us,heating_interval_us);
 
 		if(page > 1){
 			cerr << "DEBUG: page feeding " << eject_after_print_mm << "mm\n";

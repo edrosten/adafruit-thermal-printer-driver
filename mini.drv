@@ -75,7 +75,50 @@ Option "Enhance/Enhance resolution" Boolean DocumentSetup 4
   *Choice "False/No" "<</cupsInteger4 0>>setpagedevice"
 
 
+Option "Dots/Heating dots" PickOne DocumentSetup 5
+  Choice   "8"  "<</cupsInteger5   8>>setpagedevice"
+  Choice  "16"  "<</cupsInteger5  16>>setpagedevice"
+  Choice  "24"  "<</cupsInteger5  24>>setpagedevice"
+  Choice  "32"  "<</cupsInteger5  32>>setpagedevice"
+  Choice  "40"  "<</cupsInteger5  40>>setpagedevice"
+  Choice  "48"  "<</cupsInteger5  48>>setpagedevice"
+  Choice  "56"  "<</cupsInteger5  56>>setpagedevice"
+  *Choice "64"  "<</cupsInteger5  64>>setpagedevice"
+  Choice  "80"  "<</cupsInteger5  80>>setpagedevice"
+  Choice  "96"  "<</cupsInteger5  96>>setpagedevice"
+  Choice "112"  "<</cupsInteger5 112>>setpagedevice"
+  Choice "128"  "<</cupsInteger5 128>>setpagedevice"
+  Choice "192"  "<</cupsInteger5 192>>setpagedevice"
+  Choice "256"  "<</cupsInteger5 256>>setpagedevice"
+  Choice "384"  "<</cupsInteger5 384>>setpagedevice"
+  Choice "512"  "<</cupsInteger5 512>>setpagedevice"
 
+
+Option "Time/Heating time us" PickOne DocumentSetup 6
+  Choice    "50"  "<</cupsInteger6    50>>setpagedevice"
+  Choice    "75"  "<</cupsInteger6    75>>setpagedevice"
+  Choice   "100"  "<</cupsInteger6   100>>setpagedevice"
+  Choice   "150"  "<</cupsInteger6   150>>setpagedevice"
+  Choice   "200"  "<</cupsInteger6   200>>setpagedevice"
+  Choice   "300"  "<</cupsInteger6   300>>setpagedevice"
+  Choice   "400"  "<</cupsInteger6   400>>setpagedevice"
+  Choice   "600"  "<</cupsInteger6   600>>setpagedevice"
+  *Choice  "800"  "<</cupsInteger6   800>>setpagedevice"
+  Choice  "1200"  "<</cupsInteger6  1200>>setpagedevice"
+  Choice  "1600"  "<</cupsInteger6  1600>>setpagedevice"
+  Choice  "2400"  "<</cupsInteger6  2400>>setpagedevice"
+
+
+Option "Interval/Interval us" PickOne DocumentSetup 7
+  Choice    "0"  "<</cupsInteger7   0>>setpagedevice"
+  Choice   "10"  "<</cupsInteger7  10>>setpagedevice"
+  *Choice  "20"  "<</cupsInteger7  20>>setpagedevice"
+  Choice   "30"  "<</cupsInteger7  30>>setpagedevice"
+  Choice   "40"  "<</cupsInteger7  40>>setpagedevice"
+  Choice   "60"  "<</cupsInteger7  60>>setpagedevice"
+  Choice   "80"  "<</cupsInteger7  80>>setpagedevice"
+  Choice  "120"  "<</cupsInteger7 120>>setpagedevice"
+  Choice  "160"  "<</cupsInteger7 160>>setpagedevice"
 
 
 
