@@ -1,3 +1,4 @@
+#include <cups/sidechannel.h>
 #include <cups/raster.h>
 
 #include <iostream>
