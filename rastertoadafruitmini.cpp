@@ -80,7 +80,7 @@ void horizontal_rule(int w=384){
 void set_heating_time(int time_factor=80){
 	// Page 47 of the manual
 	// All the defaults are used if not overridden
-	cout << ESC << 7 << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
+	cout << ESC << '7' << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
 }
 
 constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
@@ -167,7 +167,7 @@ void set_heating_time_basic(int heating_dots, int heating_time_us, int heating_i
 
 	// Page 47 of the manual
 	// All the defaults are used if not overridden
-	cout << ESC << 7 << (unsigned char)dots << (unsigned char)time << (unsigned char)interval;
+	cout << ESC << '7' << (unsigned char)dots << (unsigned char)time << (unsigned char)interval;
 }
 
 int main(int argc, char** argv){
