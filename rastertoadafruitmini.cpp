@@ -29,6 +29,7 @@ using std::string;
 
 constexpr unsigned char ESC = 0x1b;
 constexpr unsigned char GS = 0x1d;
+constexpr unsigned char DC2 = 0x12;
 
 // Write out a std::array of bytes as bytes. 
 template<size_t N>
@@ -77,10 +78,15 @@ void horizontal_rule(int w=384){
 	cout << string((w+7)/8, '\xff');
 }
 
+void set_density(int print_density_percent, int print_break_time_us) {
+	// Page 48 of the manual
+	cout << DC2 << '#' << (char)((print_break_time_us / 250 << 5) | ((print_density_percent - 50) / 5 & 0b11111));
+}
+
 void set_heating_time(int time_factor=80){
 	// Page 47 of the manual
 	// All the defaults are used if not overridden
-	cout << ESC << 7 << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
+	cout << ESC << '7' << (char)7 << (unsigned char)std::max(3, std::min(255,time_factor)) << '\02';
 }
 
 constexpr array<array<int, 5>, 3> diffusion_coefficients = {{
@@ -167,7 +173,7 @@ void set_heating_time_basic(int heating_dots, int heating_time_us, int heating_i
 
 	// Page 47 of the manual
 	// All the defaults are used if not overridden
-	cout << ESC << 7 << (unsigned char)dots << (unsigned char)time << (unsigned char)interval;
+	cout << ESC << '7' << (unsigned char)dots << (unsigned char)time << (unsigned char)interval;
 }
 
 int main(int argc, char** argv){
@@ -220,6 +226,9 @@ int main(int argc, char** argv){
 	int heating_time_us = 800;
 	int heating_interval_us = 20;
 
+	int print_density_percent = 100;
+	int print_break_time_us = 500;
+
 	printerInitialise();
 	//This isn't cleared by initialize, so reset it to the 
 	//default just in case.
@@ -239,7 +248,8 @@ int main(int argc, char** argv){
 		heating_dots = header.cupsInteger[5];
 		heating_time_us = header.cupsInteger[6];
 		heating_interval_us = header.cupsInteger[7];
-
+		print_density_percent = header.cupsInteger[8];
+		print_break_time_us = header.cupsInteger[9];
 
 		page++;
 		//Write out information to CUPS 
@@ -256,6 +266,11 @@ int main(int argc, char** argv){
 		cerr << "DEBUG: heating_dots " << heating_dots << endl;
 		cerr << "DEBUG: heating_time_us " << heating_time_us << endl;
 		cerr << "DEBUG: heating_interval_us " << heating_interval_us << endl;
+		cerr << "DEBUG: print_density_percent " << print_density_percent << endl;
+		cerr << "DEBUG: print_break_time_us " << print_break_time_us << endl;
+
+		//Set print density
+		set_density(print_density_percent, print_break_time_us);
 
 		if(!enhance_resolution)
 			set_heating_time_basic(heating_dots,heating_time_us,heating_interval_us);

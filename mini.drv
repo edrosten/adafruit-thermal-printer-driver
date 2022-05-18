@@ -119,6 +119,25 @@ Option "Interval/Interval us" PickOne DocumentSetup 7
   Choice   "80"  "<</cupsInteger7  80>>setpagedevice"
   Choice  "120"  "<</cupsInteger7 120>>setpagedevice"
   Choice  "160"  "<</cupsInteger7 160>>setpagedevice"
+  Choice  "240"  "<</cupsInteger7 240>>setpagedevice"
+  Choice  "360"  "<</cupsInteger7 360>>setpagedevice"
+  Choice  "480"  "<</cupsInteger7 480>>setpagedevice"
+  Choice  "640"  "<</cupsInteger7 640>>setpagedevice"
+
+Option "Density/Density %" PickOne DocumentSetup 8
+  Choice   "50"  "<</cupsInteger8  50>>setpagedevice"
+  Choice   "60"  "<</cupsInteger8  60>>setpagedevice"
+  Choice   "70"  "<</cupsInteger8  70>>setpagedevice"
+  Choice   "80"  "<</cupsInteger8  80>>setpagedevice"
+  Choice   "90"  "<</cupsInteger8  90>>setpagedevice"
+  *Choice "100"  "<</cupsInteger8 100>>setpagedevice"
+
+Option "BreakTime/Print Break Time us" PickOne DocumentSetup 9
+  *Choice "500"  "<</cupsInteger9  500>>setpagedevice"
+  Choice  "750"  "<</cupsInteger9  750>>setpagedevice"
+  Choice "1000"  "<</cupsInteger9 1000>>setpagedevice"
+  Choice "1250"  "<</cupsInteger9 1250>>setpagedevice"
+  Choice "1500"  "<</cupsInteger9 1500>>setpagedevice"
 
 
 
