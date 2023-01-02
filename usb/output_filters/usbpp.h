@@ -27,9 +27,6 @@ namespace usbpp{
 	//    exceptions instead of error codes
 	//    return values instead of return arguments 
 
-	template<typename T, void(*del)(T*)>
-	using Handle = std::unique_ptr<T, decltype([](T*x){del(x);})>;
-
 	class Error: public std::runtime_error{
 		public:
 			Error(int err_code)
@@ -48,6 +45,10 @@ namespace usbpp{
 			throw Error(err);
 		}
 	}
+
+	template<typename T, void(*del)(T*)>
+	using Handle = std::unique_ptr<T, decltype([](T*x){del(x);})>;
+
 
 	using context = Handle<libusb_context, libusb_exit>;
 	inline context init(){
@@ -127,9 +128,7 @@ namespace usbpp{
 				if(handle != Invalid){
 					int h = handle;
 					handle = Invalid;
-					std::cerr << 1;
 					check(libusb_release_interface(dev, h));
-					std::cerr << 2;
 				}
 			}
 
@@ -154,20 +153,21 @@ namespace usbpp{
 			std::same_as<std::ranges::range_value_t<T>, unsigned char> 
 		);
 
-	template<ByteData Range>
-	int write(device_handle& dev, int endpoint, const Range& range, std::chrono::milliseconds timeout=std::chrono::milliseconds{0}){
+	template<typename T> concept NonConstByteData = ByteData<T> && !std::is_const_v<T>;
+
+	template<NonConstByteData Range>
+	int bulk_transfer(device_handle& dev, int endpoint, Range&& range, std::chrono::milliseconds timeout=std::chrono::milliseconds{0}){
 		using std::begin;
 		using std::end;
-
 		int sent=0;
-		std::vector<std::ranges::range_value_t<Range>> copy(begin(range), end(range));
-		int err=libusb_bulk_transfer(dev.get(), endpoint, (unsigned char*)copy.data(), copy.size(), &sent, timeout.count());
-
+		int err=libusb_bulk_transfer(dev.get(), endpoint, reinterpret_cast<unsigned char*>(&*begin(range)), end(range)-begin(range), &sent, timeout.count());
 		check(err);
-
 		return sent;
 	}
-		
+
+	void reset_device(device_handle& dev){
+		check(libusb_reset_device(dev.get()));
+	}
 };
 
 #endif
