@@ -25,7 +25,8 @@ namespace usbpp{
 	// Wrapping provides only the following:
 	//    RAII for types which need destruction
 	//    exceptions instead of error codes
-	//    return values instead of return arguments 
+	//    return values instead of return arguments
+	//    reasonable use of sensible types for buffers
 
 	class Error: public std::runtime_error{
 		public:
@@ -63,17 +64,19 @@ namespace usbpp{
 		libusb_device **list = nullptr;
 		int n = libusb_get_device_list(ctx.get(), &list);
 		check(n);
-
+		
+		// Create device handles for all the devices
 		std::vector<device> ret;
 		for(int i=0; i < n; i++)
 			ret.emplace_back(list[i]);
-
+		
+		// Free the outer list, but not the handles
 		libusb_free_device_list(list, false);
 		return ret;
 	}
 	
 	using device_descriptor = libusb_device_descriptor;
-	device_descriptor get_device_descriptor(const device& dev){
+	inline device_descriptor get_device_descriptor(const device& dev){
 		device_descriptor ret;
 		check(libusb_get_device_descriptor(dev.get(), &ret));
 		return ret;
@@ -85,6 +88,13 @@ namespace usbpp{
 		int err = libusb_open(dev.get(), &hnd);
 		check(err);
 		return device_handle{hnd};
+	}
+
+	inline device_handle open_device_with_vid_pid(context& ctx, uint16_t vid, uint16_t pid){
+		device_handle ret{libusb_open_device_with_vid_pid(ctx.get(), vid, pid)};
+		if(ret == nullptr)
+			throw Error(LIBUSB_ERROR_NOT_FOUND);
+		return ret;
 	}
 
 	inline int get_configuration(device_handle& handle){
@@ -104,6 +114,14 @@ namespace usbpp{
 		int handle=Invalid;
 		libusb_device_handle* dev = nullptr;
 
+		int try_release(){
+			if(handle != Invalid){
+				int h = handle;
+				handle = Invalid;
+				return libusb_release_interface(dev, h);
+			}
+		}
+
 		public:
 			explicit Interface(int i, device_handle& dev) noexcept
 			:handle(i),dev(dev.get())
@@ -116,6 +134,10 @@ namespace usbpp{
 				(*this) = std::move(from);
 			}
 
+			void release_interface(){
+				check(try_release());
+			}
+
 			Interface& operator=(Interface&& from){
 				release_interface();
 				handle = from.handle;
@@ -124,36 +146,26 @@ namespace usbpp{
 				return *this;
 			}
 
-			void release_interface(){
-				if(handle != Invalid){
-					int h = handle;
-					handle = Invalid;
-					check(libusb_release_interface(dev, h));
-				}
-			}
-
 			~Interface(){
-				try{
-					release_interface();
-				}
-				catch(const Error& e){
-					std::cerr << "Failed to release interface: " << e.what() << std::endl;
-				}
+				if(int e; (e=libusb_release_interface(dev, handle)) != 0)
+					std::cerr << "Failed to release interface: " << Error(e).what() << "\n";
 			}
 	};
+
 
 	Interface claim_interface(device_handle& dev, int interface){
 		usbpp::check(libusb_claim_interface(dev.get(), interface));
 		return Interface{interface, dev};
 	}
-	template<typename T> concept ByteData = 
-		std::ranges::contiguous_range<T> && (
-			std::same_as<std::ranges::range_value_t<T>, char> 
-			|| 
-			std::same_as<std::ranges::range_value_t<T>, unsigned char> 
-		);
 
-	template<typename T> concept NonConstByteData = ByteData<T> && !std::is_const_v<T>;
+	template<typename T, typename... Args>
+	constexpr bool one_of = (... || std::same_as<T, Args>);
+
+
+	template<typename T> concept NonConstByteData = 
+		std::ranges::contiguous_range<T> && 
+		one_of<std::ranges::range_value_t<T>, char, unsigned char, std::byte> &&
+		!std::is_const_v<T>;
 
 	template<NonConstByteData Range>
 	int bulk_transfer(device_handle& dev, int endpoint, Range&& range, std::chrono::milliseconds timeout=std::chrono::milliseconds{0}){
@@ -167,6 +179,20 @@ namespace usbpp{
 
 	void reset_device(device_handle& dev){
 		check(libusb_reset_device(dev.get()));
+	}
+
+	using config_descriptor = Handle<libusb_config_descriptor, libusb_free_config_descriptor>;
+	inline config_descriptor get_config_descriptor(device& dev, uint8_t config_index){
+		libusb_config_descriptor *desc = nullptr;
+		check(libusb_get_config_descriptor(dev.get(), config_index, &desc));
+		return config_descriptor{desc};
+	}
+
+	using config_descriptor = Handle<libusb_config_descriptor, libusb_free_config_descriptor>;
+	inline config_descriptor get_config_descriptor_by_value(device& dev, uint8_t bConfigurationValue){
+		libusb_config_descriptor *desc = nullptr;
+		check(libusb_get_config_descriptor_by_value(dev.get(), bConfigurationValue, &desc));
+		return config_descriptor{desc};
 	}
 };
 
